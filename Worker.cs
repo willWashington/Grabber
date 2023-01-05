@@ -1,8 +1,6 @@
 using Grabber.Entry;
-using Grabber.Models;
-using Grabber.Utilities;
-using System.Diagnostics;
 
+///Grabber is a worker service responsible for reaching out and grabbing information about keywords fed to it from various internet sources.
 namespace Grabber
 {
     public class Worker : BackgroundService

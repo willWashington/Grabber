@@ -1,10 +1,4 @@
 ﻿using Grabber.Execution;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Grabber.Entry
 {
@@ -18,12 +12,15 @@ namespace Grabber.Entry
     /// Writer writes the data via FASTER to disk
     /// Inspector inspects the data and cleans the system of needless information
     /// </summary>
-    
+
     public static class EntryPoint
     {
-        public static void Entry()
+        public static async void Entry()
         {
-            Collector.Collect();
+            if (!Collector.Running)
+            {
+                await Collector.CollectAsync();
+            }
         }
     }
 }
