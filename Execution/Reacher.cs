@@ -1,11 +1,10 @@
 ﻿using Grabber.Models;
 using Grabber.Utilities;
 using QuickType;
-using System.Net.Http.Headers;
 using Reddit;
-using static Grabber.Utilities.CustomValues;
-using System.Text;
 using Reddit.Inputs.Search;
+using System.Net.Http.Headers;
+using static Grabber.Utilities.CustomValues;
 
 namespace Grabber.Execution
 {
