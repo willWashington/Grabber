@@ -76,15 +76,15 @@
 
     public partial class PolygonPayload
     {
-        public static PolygonPayload FromJson(string json) => JsonConvert.DeserializeObject<PolygonPayload>(json, QuickType.Converter.Settings);
+        public static PolygonPayload FromJson(string json) => JsonConvert.DeserializeObject<PolygonPayload>(json, QuickType.PolygonPayloadConverter.Settings);
     }
 
     public static class Serialize
     {
-        public static string ToJson(this PolygonPayload self) => JsonConvert.SerializeObject(self, QuickType.Converter.Settings);
+        public static string ToJson(this PolygonPayload self) => JsonConvert.SerializeObject(self, QuickType.PolygonPayloadConverter.Settings);
     }
 
-    internal static class Converter
+    internal static class PolygonPayloadConverter
     {
         public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {

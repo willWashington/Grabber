@@ -49,7 +49,7 @@ namespace Grabber.Execution
 
         private static void BuildCollection()
         {
-            Tickers.Add("HardyRekshin");
+            Tickers.Add("OPINION_IS_UNPOPULAR");
             Tickers.Add("NTDOY");
             Tickers.Add("AMZN");
         }
@@ -74,9 +74,15 @@ namespace Grabber.Execution
             var reddit = new RedditClient(appId: appID, appSecret: secretToken, refreshToken: refreshToken);
             //var test = reddit.Search(query, null);
             var posts = reddit.Subreddit("all").Search(new SearchGetSearchInput(query, limit: 500));
+            
             posts.ForEach(x =>
             {
-                Console.WriteLine($"{x.Author}, {x.Created}, {x.Title}, Spam = {x.Spam}, {x.Permalink}, Upvotes = {x.UpVotes} {Environment.NewLine}");
+
+
+                if (x.Author.Contains("Ill_Web"))
+                {
+                    Console.WriteLine($"{x.Author}, {x.Created}, {x.Title}, Spam = {x.Spam}, {x.Permalink}, Upvotes = {x.UpVotes} {Environment.NewLine}");
+                }
             });
             Console.ReadLine();
             return "";
