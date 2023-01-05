@@ -1,29 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Grabber.Execution
+﻿namespace Grabber.Execution
 {
     static internal class Collector
     {
         public static List<string> StringsToQuery = new List<string>();
+        public static readonly bool Running = false;
 
         private static Dictionary<int, string> stringsToWrite = new Dictionary<int, string>();
-        //private int entryCount = DiskWriter.
+        private static bool firstRun = true;
 
-        internal static void Collect()
+
+        internal static async Task CollectAsync()
         {
+
             //if the user hits a key, stop iteration for input
             if (Console.KeyAvailable)
             {
-                var query = PromptUser();
-                //stringsToWrite.Add()
+                //var query = PromptUser();
+            }
+
+            if (firstRun)
+            {
+                firstRun = false;
+                Reacher.Reach();
+                await Reacher.QueryAPIsAsync();
             }
         }
-        
+
         static string PromptUser()
         {
             Console.Clear();

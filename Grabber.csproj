@@ -11,5 +11,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
     <PackageReference Include="Microsoft.FASTER.Core" Version="2.2.0" />
     <PackageReference Include="Reddit" Version="1.5.2" />
+    <PackageReference Include="Reddit.AuthTokenRetrieverLib" Version="1.5.2" />
   </ItemGroup>
 </Project>

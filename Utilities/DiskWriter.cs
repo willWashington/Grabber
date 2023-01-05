@@ -1,9 +1,6 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
-using FASTER.core;
-using Grabber.Models;
+﻿using FASTER.core;
 using Grabber.Utilities;
+using System.Diagnostics;
 
 namespace Grabber
 {
@@ -57,7 +54,6 @@ namespace Grabber
             var sw = new Stopwatch();
 
             int count = 0;
-            Console.WriteLine($"Payload size: {payload.Length}");
             sw.Start();
 
             store.Begin();
@@ -65,13 +61,10 @@ namespace Grabber
             store.End();
 
             sw.Stop();
-            Console.WriteLine($"Puts Took {sw.Elapsed.TotalSeconds}s");
             sw.Restart();
             var g = store.Get($"{count}");
 
             sw.Stop();
-
-            Console.WriteLine($"Gets Took {sw.Elapsed.TotalSeconds}s");
         }
 
         public void Put(string key, string value)

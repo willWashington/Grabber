@@ -1,10 +1,11 @@
 ﻿using Grabber.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+using Grabber.Utilities;
+using QuickType;
+using System.Net.Http.Headers;
+using Reddit;
+using static Grabber.Utilities.CustomValues;
 using System.Text;
-using System.Threading.Tasks;
+using Reddit.Inputs.Search;
 
 namespace Grabber.Execution
 {
@@ -29,10 +30,7 @@ namespace Grabber.Execution
 
     //https://www.reddit.com/dev/api/ - reddit
     //https://www.reddit.com/r/Wallstreetbets/top.json?limit=10&t=year
-    //iimP0TbNxwM8FVAtBjGpt_669YD9Eg
     //GET https://api.marketaux.com/v1/news/all?symbols=TSLA,AMZN,MSFT&filter_entities=true&language=en&api_token=YOUR_API_TOKEN - stock news
-
-    //VtNkNGdLpeYafClNYTOUqFIDbcBgYhkRHEHo0CHu    
 
     //https://www.alphavantage.co/documentation/ - ticker historical info
 
@@ -42,50 +40,72 @@ namespace Grabber.Execution
         public static List<string> Tickers = new List<string>();
         public static List<string> QueryStrings = new List<string>();
 
-        public static void Reach(string queryString)
+        private static List<DiskStorePayload> payloads = new List<DiskStorePayload>();
+
+        public static void Reach(string queryString = "")
         {
+            if (Tickers.Count == 0) BuildCollection();
             if (APIs.Count == 0) PopulateAPIList();
-            BuildCollection();
-
-            var payload = new DiskStorePayload();
-
-            using (FasterKeyValueStore diskWriter = new FasterKeyValueStore())
-            {
-                diskWriter.WriteToDisk(payload.Payload);
-            };
         }
 
-        private static async void BuildCollection()
+        private static void BuildCollection()
         {
+            Tickers.Add("HardyRekshin");
             Tickers.Add("NTDOY");
-            PopulateAPIList();
-
-            using HttpClient client = new HttpClient();
-            await ProcessRepositoriesAsync(client);
+            Tickers.Add("AMZN");
         }
 
         private static void PopulateAPIList()
         {
-            #region Market APIs
-            var marketauxToken = "VtNkNGdLpeYafClNYTOUqFIDbcBgYhkRHEHo0CHu";
-            var marketauxUrl = "https://api.marketaux.com/v1/news/all?symbols=";
+            #region Market APIs            
             foreach (var ticker in Tickers)
             {
-                //add tickers
-                marketauxUrl += ticker.ToString().Trim() + ",";
+                var polygonUrl = APIStringBuilder.GetPolygonAPIString(ticker);
+                APIs.Add(polygonUrl);
+                QueryReddit(ticker);
             }
-            marketauxUrl += $"&must_have_entities=true&filter_entities=true&language=en&api_token={marketauxToken}";
-            APIs.Add(marketauxUrl);
             #endregion
         }
 
-
-
-        public static async Task ProcessRepositoriesAsync(HttpClient client)
+        public static string QueryReddit(string query)
         {
-
+            var refreshToken = Environment.GetEnvironmentVariable("REDDIT_REFRESH_TOKEN");
+            var appID = Environment.GetEnvironmentVariable("REDDIT_APP_ID");
+            var secretToken = Environment.GetEnvironmentVariable("REDDIT_SECRET_TOKEN");
+            var reddit = new RedditClient(appId: appID, appSecret: secretToken, refreshToken: refreshToken);
+            //var test = reddit.Search(query, null);
+            var posts = reddit.Subreddit("all").Search(new SearchGetSearchInput(query, limit: 500));
+            posts.ForEach(x =>
+            {
+                Console.WriteLine($"{x.Author}, {x.Created}, {x.Title}, Spam = {x.Spam}, {x.Permalink}, Upvotes = {x.UpVotes} {Environment.NewLine}");
+            });
+            Console.ReadLine();
+            return "";
         }
 
+        public static async Task QueryAPIsAsync()
+        {
+            using HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+            client.DefaultRequestHeaders.Add("User-Agent", ".NET Foundation Repository Reporter");
+            await ProcessRepositoriesAsync(client);
+        }
 
+        private static async Task ProcessRepositoriesAsync(HttpClient client)
+        {
+            using (FasterKeyValueStore diskWriter = new FasterKeyValueStore())
+            {
+                foreach (var repo in APIs)
+                {
+                    var json = await client.GetStringAsync(repo);
+                    var payload = new DiskStorePayload(PayloadType.Polygon, json);
+                    var converted = PolygonPayload.FromJson(json);
+                    diskWriter.WriteToDisk(payload.Payload);
+                    Console.WriteLine(payload.Payload);
+                }
+            };
+        }
     }
 }
