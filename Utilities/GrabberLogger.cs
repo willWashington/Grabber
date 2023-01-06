@@ -35,7 +35,7 @@ namespace Grabber.Utilities
             Console.WriteLine(Environment.NewLine);
         }
 
-        private static void Log(string message, ConsoleColor color = ConsoleColor.White)
+        public static void Log(string message, ConsoleColor color = ConsoleColor.White)
         {
             if (Quiet) return;
 

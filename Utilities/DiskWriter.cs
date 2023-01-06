@@ -1,4 +1,5 @@
 ﻿using FASTER.core;
+using Grabber.Execution;
 using Grabber.Models;
 using Grabber.Utilities;
 using System.Diagnostics;
@@ -16,6 +17,8 @@ namespace Grabber
             _session;
 
         private FasterKV<string, string> _store;
+
+        private static int Count = 0;
 
         public FasterKeyValueStore()
         {
@@ -50,7 +53,7 @@ namespace Grabber
             _session = _store.NewSession(new SimpleFunctions<string, string>());
         }
 
-        public static int ConvertPayloadToJSON<T>(T payload)
+        public static int ConvertPayloadToJSONAndWriteToDisk<T>(T payload)
         {
             string? json;
             switch (payload)
@@ -62,7 +65,6 @@ namespace Grabber
                 case PolygonPayload polygonPayload:
                     GrabberLogger.ReportPayload(polygonPayload);
                     json = JsonSerializer.Serialize(polygonPayload);
-                    Console.WriteLine(json);
                     return WriteToDisk(json);
                 default:
                     return 0;
@@ -75,18 +77,17 @@ namespace Grabber
             store.Clear();
             var sw = new Stopwatch();
 
-            int count = 0;
+            Count++;
             sw.Start();
 
-            store.Put($"{count}", payload);
-            store.End();
+            store.Put($"{Count}", payload);
 
             sw.Stop();
             sw.Restart();
-            var g = store.Get($"{count}");
+            var g = store.Get($"{Count}");
 
             sw.Stop();
-            return count;
+            return Count;
         }
 
         public void Put(string key, string value)
@@ -109,12 +110,54 @@ namespace Grabber
         {
             foreach (var payload in payloads)
             {
-                ConvertPayloadToJSON(payload);
+                var key = ConvertPayloadToJSONAndWriteToDisk(payload);
+                var jsonToConvert = Get($"{key}");
+                if (jsonToConvert.ToLower().Contains("upvotes"))
+                {
+                    RedditPayload? redditPayload = JsonSerializer.Deserialize<RedditPayload>(jsonToConvert);
+                    ValidateDiskSaveAndCleanUp(payload, redditPayload);
+                }
+
+                if (jsonToConvert.ToLower().Contains("description"))
+                {
+                    PolygonPayload? polygonPayload = JsonSerializer.Deserialize<PolygonPayload>(jsonToConvert);
+                    ValidateDiskSaveAndCleanUp(payload, polygonPayload: polygonPayload);
+                }
             }
+            GrabberLogger.Quiet = true;
+            End();
+        }
+
+        private void ValidateDiskSaveAndCleanUp(Payload payload, RedditPayload? redditPayload = null, PolygonPayload polygonPayload = null)
+        {
+            if (redditPayload == null && polygonPayload == null)
+            {
+                GrabberLogger.Log("No payload to validate!", ConsoleColor.Red);
+                throw new Exception("No payload to validate!");
+            }
+
+            if (redditPayload != null)
+            {
+                if (payload.Title.ToLower() != redditPayload?.Title.ToLower())
+                {
+                    GrabberLogger.Log("Reddit save data does not match recovery data.", ConsoleColor.Red);
+                    throw new Exception("Reddit save data does not match recovery data.");
+                }
+            }
+
+            if (polygonPayload != null)
+            {
+                if (payload.Title.ToLower() != polygonPayload?.Title.ToLower())
+                {
+                    GrabberLogger.Log("Polygon save data does not match recovery data.", ConsoleColor.Red);
+                    throw new Exception("Polygon save data does not match recovery data.");
+                }
+            }            
         }
 
         public void End()
         {
+            Reacher.Cleanup();
             var x = _store.TakeFullCheckpointAsync(CheckpointType.Snapshot);
         }
 

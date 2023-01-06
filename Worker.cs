@@ -15,20 +15,26 @@ namespace Grabber
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var count = 0;
+            var heartbeatCounter = 0;
+            var logCounter = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
                 //report heartbeat every 3 seconds
-                if (count == 3)
+                if (logCounter == 3 && !GrabberLogger.Quiet)
                 {
-                    count = 0;
+                    logCounter = 0;
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                }
+
+                if (heartbeatCounter % 60 == 0 && GrabberLogger.Quiet)
+                {
+                    GrabberLogger.Quiet = false;
                 }
                 
                 //entry every second
                 EntryPoint.Entry();
-                count++;
-
+                heartbeatCounter++;
+                logCounter++;
                 //define worker service tickrate as delay (aka iterate every second)
                 await Task.Delay(1000, stoppingToken);
             }

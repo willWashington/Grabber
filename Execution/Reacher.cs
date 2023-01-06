@@ -42,10 +42,16 @@ namespace Grabber.Execution
 
         static List<Payload> payloads = new List<Payload>();
 
+        public static void Cleanup()
+        {
+            APIs.Clear();
+            Tickers.Clear();
+            QueryStrings.Clear();
+            payloads.Clear();
+        }
+
         public static void Reach(string queryString = "")
         {
-            if (APIs.Count == 0) PopulateAPIList();
-
             if (string.IsNullOrEmpty(queryString) && QueryStrings?.Count == 0)
             {
                 Console.WriteLine("No entires to query!");
@@ -54,17 +60,20 @@ namespace Grabber.Execution
 
             if (queryString.StartsWith("$"))
             {
+                queryString = queryString.Substring(1);
                 if (!Tickers.Contains(queryString))
-                {
-                    Tickers.Add(queryString.Substring(1));
+                {                    
+                    Tickers.Add(queryString.ToUpper());
                 }
-            } else
+            }
+
+            if (!QueryStrings.Contains(queryString))
             {
-                if (!QueryStrings.Contains(queryString))
-                {
                     QueryStrings.Add(queryString);
-                }                
-            }            
+            }
+
+            if (APIs.Count == 0) PopulateAPIList();
+
             QueryAPIsAsync();
         }
 
@@ -119,8 +128,7 @@ namespace Grabber.Execution
             } catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-            }
-            
+            }            
 
             using (FasterKeyValueStore diskWriter = new FasterKeyValueStore())
             {
