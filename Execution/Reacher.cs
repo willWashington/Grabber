@@ -3,8 +3,9 @@ using Grabber.Utilities;
 using QuickType;
 using Reddit;
 using Reddit.Inputs.Search;
+using System;
+using System.ComponentModel;
 using System.Net.Http.Headers;
-using static Grabber.Utilities.CustomValues;
 
 namespace Grabber.Execution
 {
@@ -35,54 +36,50 @@ namespace Grabber.Execution
 
     public static class Reacher
     {
-        public static List<string> APIs = new List<string>();
-        public static List<string> Tickers = new List<string>();
-        public static List<string> QueryStrings = new List<string>();
+        static List<string> APIs = new();
+        static List<string> Tickers = new();
+        static List<string> QueryStrings = new();
 
-        private static List<DiskStorePayload> payloads = new List<DiskStorePayload>();
+        static List<Payload> payloads = new List<Payload>();
 
         public static void Reach(string queryString = "")
         {
-            if (Tickers.Count == 0) BuildCollection();
             if (APIs.Count == 0) PopulateAPIList();
-        }
 
-        private static void BuildCollection()
-        {
-            Tickers.Add("HardyRekshin");
-            Tickers.Add("NTDOY");
-            Tickers.Add("AMZN");
+            if (string.IsNullOrEmpty(queryString) && QueryStrings?.Count == 0)
+            {
+                Console.WriteLine("No entires to query!");
+                return;
+            }
+
+            if (queryString.StartsWith("$"))
+            {
+                if (!Tickers.Contains(queryString))
+                {
+                    Tickers.Add(queryString.Substring(1));
+                }
+            } else
+            {
+                if (!QueryStrings.Contains(queryString))
+                {
+                    QueryStrings.Add(queryString);
+                }                
+            }            
+            QueryAPIsAsync();
         }
 
         private static void PopulateAPIList()
         {
-            #region Market APIs            
+            #region Market APIs
             foreach (var ticker in Tickers)
             {
                 var polygonUrl = APIStringBuilder.GetPolygonAPIString(ticker);
                 APIs.Add(polygonUrl);
-                QueryReddit(ticker);
             }
             #endregion
         }
 
-        public static string QueryReddit(string query)
-        {
-            var refreshToken = Environment.GetEnvironmentVariable("REDDIT_REFRESH_TOKEN");
-            var appID = Environment.GetEnvironmentVariable("REDDIT_APP_ID");
-            var secretToken = Environment.GetEnvironmentVariable("REDDIT_SECRET_TOKEN");
-            var reddit = new RedditClient(appId: appID, appSecret: secretToken, refreshToken: refreshToken);
-            //var test = reddit.Search(query, null);
-            var posts = reddit.Subreddit("all").Search(new SearchGetSearchInput(query, limit: 500));
-            posts.ForEach(x =>
-            {
-                Console.WriteLine($"{x.Author}, {x.Created}, {x.Title}, Spam = {x.Spam}, {x.Permalink}, Upvotes = {x.UpVotes} {Environment.NewLine}");
-            });
-            Console.ReadLine();
-            return "";
-        }
-
-        public static async Task QueryAPIsAsync()
+        private static async Task QueryAPIsAsync()
         {
             using HttpClient client = new HttpClient();
             client.DefaultRequestHeaders.Accept.Clear();
@@ -94,17 +91,60 @@ namespace Grabber.Execution
 
         private static async Task ProcessRepositoriesAsync(HttpClient client)
         {
-            using (FasterKeyValueStore diskWriter = new FasterKeyValueStore())
+            try
             {
+                #region Process Reddit query if any
+
+                foreach (var query in QueryStrings)
+                {
+                    await QueryReddit(query);
+                }
+
+                #endregion
+
+
                 foreach (var repo in APIs)
                 {
                     var json = await client.GetStringAsync(repo);
-                    var payload = new DiskStorePayload(PayloadType.Polygon, json);
-                    var converted = PolygonPayload.FromJson(json);
-                    diskWriter.WriteToDisk(payload.Payload);
-                    Console.WriteLine(payload.Payload);
+                    var converted = PolygonPayloadConverter.FromJson(json);
+                    if (converted.Results.Count() > 0)
+                    {
+                        var resultList = converted.Results.ToList();
+                        foreach (Result result in resultList)
+                        {
+                            payloads.Add(new PolygonPayload(result.PublishedUtc.Date, result.Title, result.ArticleUrl.AbsolutePath, result.Description));
+                        }
+                    }
                 }
+            } catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            
+
+            using (FasterKeyValueStore diskWriter = new FasterKeyValueStore())
+            {
+                diskWriter.Begin(payloads);
             };
+        }
+
+        private static async Task QueryReddit(string query)
+        {
+            var refreshToken = Environment.GetEnvironmentVariable("REDDIT_REFRESH_TOKEN");
+            var appID = Environment.GetEnvironmentVariable("REDDIT_APP_ID");
+            var secretToken = Environment.GetEnvironmentVariable("REDDIT_SECRET_TOKEN");
+            var reddit = new RedditClient(appId: appID, appSecret: secretToken, refreshToken: refreshToken);
+
+            //get last 500 results that match the query string
+            var posts = await Task.Run(() => reddit.Subreddit("all").Search(new SearchGetSearchInput(query, limit: 500)));
+
+            var count = 0;
+            posts.ForEach(x =>
+            {
+                count++;
+                payloads.Add(new RedditPayload(x.Created, x.Title, x.Permalink, x.Author, x.Spam, x.UpVotes));
+            });
+            Console.WriteLine($"Reddit payloads added {count}");
         }
     }
 }
