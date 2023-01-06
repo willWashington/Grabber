@@ -1,6 +1,6 @@
 ﻿namespace Grabber.Models
 {
-    internal class Payload
+    public class Payload
     {
         public Guid ID { get; set; }
         public DateTime CreatedDate { get; set; }

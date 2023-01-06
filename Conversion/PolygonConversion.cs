@@ -5,7 +5,7 @@
     using System;
     using System.Globalization;
 
-    public partial class PolygonPayload
+    public partial class PolygonPayloadConverter
     {
         [JsonProperty("results")]
         public Result[] Results { get; set; }
@@ -74,17 +74,17 @@
         public Uri FaviconUrl { get; set; }
     }
 
-    public partial class PolygonPayload
+    public partial class PolygonPayloadConverter
     {
-        public static PolygonPayload FromJson(string json) => JsonConvert.DeserializeObject<PolygonPayload>(json, QuickType.PolygonPayloadConverter.Settings);
+        public static PolygonPayloadConverter FromJson(string json) => JsonConvert.DeserializeObject<PolygonPayloadConverter>(json, QuickType.PolygonConversion.Settings);
     }
 
     public static class Serialize
     {
-        public static string ToJson(this PolygonPayload self) => JsonConvert.SerializeObject(self, QuickType.PolygonPayloadConverter.Settings);
+        public static string ToJson(this PolygonPayloadConverter self) => JsonConvert.SerializeObject(self, QuickType.PolygonConversion.Settings);
     }
 
-    internal static class PolygonPayloadConverter
+    internal static class PolygonConversion
     {
         public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {

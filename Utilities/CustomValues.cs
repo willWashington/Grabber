@@ -4,6 +4,7 @@
     {
         public enum PayloadType
         {
+            Generic,
             Polygon,
             Reddit
         };

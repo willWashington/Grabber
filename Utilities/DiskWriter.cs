@@ -1,6 +1,8 @@
 ﻿using FASTER.core;
+using Grabber.Models;
 using Grabber.Utilities;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace Grabber
 {
@@ -41,13 +43,33 @@ namespace Grabber
             }
             catch (Exception e)
             {
-                // first recover with no checkpoint spits the dummy
+                //ignore the error for some reason per the devs
+                Console.WriteLine($"Error ignored: {e.Message} --> {e.InnerException}");
             }
 
             _session = _store.NewSession(new SimpleFunctions<string, string>());
         }
 
-        public void WriteToDisk(string payload)
+        public static int ConvertPayloadToJSON<T>(T payload)
+        {
+            string? json;
+            switch (payload)
+            {
+                case RedditPayload redditPayload:
+                    GrabberLogger.ReportPayload(redditPayload);
+                    json = JsonSerializer.Serialize(redditPayload);                    
+                    return WriteToDisk(json);
+                case PolygonPayload polygonPayload:
+                    GrabberLogger.ReportPayload(polygonPayload);
+                    json = JsonSerializer.Serialize(polygonPayload);
+                    Console.WriteLine(json);
+                    return WriteToDisk(json);
+                default:
+                    return 0;
+            }
+        }
+
+        public static int WriteToDisk(string payload)
         {
             using var store = new FasterKeyValueStore();
             store.Clear();
@@ -56,7 +78,6 @@ namespace Grabber
             int count = 0;
             sw.Start();
 
-            store.Begin();
             store.Put($"{count}", payload);
             store.End();
 
@@ -65,6 +86,7 @@ namespace Grabber
             var g = store.Get($"{count}");
 
             sw.Stop();
+            return count;
         }
 
         public void Put(string key, string value)
@@ -83,8 +105,12 @@ namespace Grabber
         {
         }
 
-        public void Begin()
+        public void Begin(List<Payload> payloads)
         {
+            foreach (var payload in payloads)
+            {
+                ConvertPayloadToJSON(payload);
+            }
         }
 
         public void End()

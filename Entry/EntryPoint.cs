@@ -15,11 +15,30 @@ namespace Grabber.Entry
 
     public static class EntryPoint
     {
-        public static async void Entry()
+        public static void Entry()
         {
+            //if the user hits a key, stop iteration for input
+            if (Console.KeyAvailable)
+            {
+                PromptUser();
+            }
+
             if (!Collector.Running)
             {
-                await Collector.CollectAsync();
+                Collector.CollectAsync();
+            }
+        }
+
+        static void PromptUser()
+        {
+            Console.Clear();
+            Console.WriteLine("Please enter a string to query!");
+            Console.WriteLine("Don't be stupid. It'll break because I'm lazy.");
+            var returnValue = "";
+            returnValue = Console.ReadLine();
+            if (!string.IsNullOrEmpty(returnValue))
+            {
+                Reacher.Reach(returnValue);
             }
         }
     }
